@@ -9,9 +9,32 @@ x-logging:
     tag: "{{.Name}}"
 
 services:
+  cassandra:
+    image: bitnami/cassandra:3.11.11
+    container_name: cassandra
+    restart: always
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra:/bitnami
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "SELECT table_name FROM system_schema.tables WHERE keyspace_name='loki';" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      CASSANDRA_USER: cassandra
+      CASSANDRA_PASSWORD: cassandra
+      CASSANDRA_CLUSTER_NAME: loki
+      CASSANDRA_DATACENTER: dc1
+    networks:
+      - lokidemo
+    logging: *default-logging
+
   redis:
     image: bitnami/redis:6.0
     container_name: redis
+    restart: always
     environment:
       ALLOW_EMPTY_PASSWORD: "yes"
     ports:
@@ -22,6 +45,7 @@ services:
 
   consul:
     container_name: consul
+    restart: always
     image: consul:1.9
     command: agent -log-level=info -dev -client 0.0.0.0
     volumes:
@@ -33,36 +57,19 @@ services:
       - lokidemo
     logging: *default-logging
 
-  minio:
-    image: minio/minio:RELEASE.2022-03-11T23-57-45Z
-    container_name: minio
-    entrypoint: sh
-    command: -c 'mkdir -p /export/loki && minio server /export'
-    environment:
-      - MINIO_ROOT_USER=697d0993dd097f38d5b8
-      - MINIO_ROOT_PASSWORD=9f88738761b57c63f6a81bdfd471
-    ports:
-      - 9000:9000
-    networks:
-      - lokidemo
-    volumes:
-      - minio:/export
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    logging: *default-logging
-
   loki-distributor:
     image: grafana/loki:2.4.2
     container_name: loki-distributor
+    restart: always
     ports:
       - 3101:3100
     depends_on:
-      - minio
-      - redis
-      - consul
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+      cassandra:
+        condition: service_healthy
     volumes:
       - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=distributor
@@ -73,12 +80,16 @@ services:
   loki-querier:
     image: grafana/loki:2.4.2
     container_name: loki-querier
+    restart: always
     ports:
       - 3100
     depends_on:
-      - minio
-      - redis
-      - consul
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+      cassandra:
+        condition: service_healthy
     volumes:
       - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=querier
@@ -89,12 +100,16 @@ services:
   loki-ingester:
     image: grafana/loki:2.4.2
     container_name: loki-ingester
+    restart: always
     ports:
       - 3100
     depends_on:
-      - minio
-      - redis
-      - consul
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+      cassandra:
+        condition: service_healthy
     volumes:
       - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=ingester
@@ -105,12 +120,16 @@ services:
   loki-table-manager:
     image: grafana/loki:2.4.2
     container_name: loki-table-manager
+    restart: always
     ports:
       - 3100
     depends_on:
-      - minio
-      - redis
-      - consul
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+      cassandra:
+        condition: service_healthy
     volumes:
       - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=table-manager
@@ -121,7 +140,7 @@ services:
   nginx-app:
     image: nginx
     container_name: nginx-app
-    restart: unless-stopped
+    restart: always
     ports:
       - 8084:80
     networks:
@@ -134,7 +153,7 @@ services:
     image: flask-app
     container_name: flask-app
     build: ./flask-app
-    restart: unless-stopped
+    restart: always
     ports:
       - 5000:5000
     logging: *default-logging
@@ -142,13 +161,16 @@ services:
   promtail:
     image:  grafana/promtail:2.4.2
     container_name: promtail
+    restart: always
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./configs/promtail/docker-config.yaml:/etc/promtail/docker-config.yaml
     command: -config.file=/etc/promtail/docker-config.yaml
     depends_on:
-      - flask-app
-      - loki-ingester
+      flask-app:
+        condition: service_started
+      loki-ingester:
+        condition: service_started
     networks:
       - lokidemo
     logging: *default-logging
@@ -156,6 +178,7 @@ services:
   grafana:
     image: grafana/grafana:8.4.5
     container_name: grafana
+    restart: always
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
@@ -167,19 +190,19 @@ services:
     networks:
       - lokidemo
     depends_on:
-      - loki-ingester
-      - minio
+      loki-ingester:
+        condition: service_started
     volumes:
       - ./configs/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - grafana:/var/lib/grafana
     logging: *default-logging
 
 volumes:
-  minio: {}
   grafana: {}
   consul-config: {}
   consul-data: {}
+  cassandra: {}
 
 networks:
-  lokidemo: 
+  lokidemo:
     name: lokidemo

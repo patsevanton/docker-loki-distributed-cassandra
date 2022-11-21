@@ -23,46 +23,6 @@ services:
           - redis
     logging: *default-logging
 
-  cassandra:
-    image: bitnami/cassandra:3.11.11
-    container_name: cassandra
-    ports:
-      - "9042:9042"
-    volumes:
-      - cassandra:/bitnami
-    restart: always
-    healthcheck:
-      test: [ "CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "SELECT table_name FROM system_schema.tables WHERE keyspace_name='loki';" ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    environment:
-      CASSANDRA_USER: cassandra
-      CASSANDRA_PASSWORD: cassandra
-      CASSANDRA_CLUSTER_NAME: loki
-      CASSANDRA_DATACENTER: dc1
-    networks:
-      loki:
-        aliases:
-          - cassandra
-    logging: *default-logging
-
-  consul:
-    container_name: consul
-    restart: always
-    image: consul:1.9
-    command: agent -log-level=info -dev -client 0.0.0.0
-    volumes:
-      - consul-config:/consul/config
-      - consul-data:/consul/data
-    ports:
-      - 8500:8500
-    networks:
-      loki:
-        aliases:
-          - consul
-    logging: *default-logging
-
   loki-distributor:
     image: grafana/loki:2.4.2
     container_name: loki-distributor
@@ -151,6 +111,46 @@ services:
           - loki-table-manager
     logging: *default-logging
 
+  cassandra:
+    image: bitnami/cassandra:3.11.11
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra:/bitnami
+    restart: always
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "SELECT table_name FROM system_schema.tables WHERE keyspace_name='loki';" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      CASSANDRA_USER: cassandra
+      CASSANDRA_PASSWORD: cassandra
+      CASSANDRA_CLUSTER_NAME: loki
+      CASSANDRA_DATACENTER: dc1
+    networks:
+      loki:
+        aliases:
+          - cassandra
+    logging: *default-logging
+
+  consul:
+    container_name: consul
+    restart: always
+    image: consul:1.9
+    command: agent -log-level=info -dev -client 0.0.0.0
+    volumes:
+      - consul-config:/consul/config
+      - consul-data:/consul/data
+    ports:
+      - 8500:8500
+    networks:
+      loki:
+        aliases:
+          - consul
+    logging: *default-logging
+
   promtail:
     image:  grafana/promtail:2.4.2
     container_name: promtail
@@ -193,10 +193,10 @@ services:
     logging: *default-logging
 
 volumes:
-  grafana: {}
-  consul-config: {}
-  consul-data: {}
-  cassandra: {}
+  grafana:
+  consul-config:
+  consul-data:
+  cassandra:
 
 networks:
   loki:

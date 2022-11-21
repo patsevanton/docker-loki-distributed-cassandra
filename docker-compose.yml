@@ -9,6 +9,18 @@ x-logging:
     tag: "{{.Name}}"
 
 services:
+  redis:
+    image: bitnami/redis:6.0
+    container_name: redis
+    restart: always
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - 6379
+    networks:
+      - lokidemo
+    logging: *default-logging
+
   cassandra:
     image: bitnami/cassandra:3.11.11
     container_name: cassandra
@@ -27,18 +39,6 @@ services:
       CASSANDRA_PASSWORD: cassandra
       CASSANDRA_CLUSTER_NAME: loki
       CASSANDRA_DATACENTER: dc1
-    networks:
-      - lokidemo
-    logging: *default-logging
-
-  redis:
-    image: bitnami/redis:6.0
-    container_name: redis
-    restart: always
-    environment:
-      ALLOW_EMPTY_PASSWORD: "yes"
-    ports:
-      - 6379
     networks:
       - lokidemo
     logging: *default-logging

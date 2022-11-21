@@ -71,7 +71,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./consul_config.yaml:/etc/loki/config.yaml
+      - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=distributor
     networks:
       - lokidemo
@@ -91,7 +91,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./consul_config.yaml:/etc/loki/config.yaml
+      - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=querier
     networks:
       - lokidemo
@@ -111,7 +111,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./consul_config.yaml:/etc/loki/config.yaml
+      - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=ingester
     networks:
       - lokidemo
@@ -131,7 +131,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./consul_config.yaml:/etc/loki/config.yaml
+      - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=table-manager
     networks:
       - lokidemo

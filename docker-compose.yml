@@ -10,25 +10,27 @@ x-logging:
 
 services:
   redis:
-    image: bitnami/redis:6.0
     container_name: redis
+    image: redis:7.0.5-alpine
     restart: always
     environment:
       ALLOW_EMPTY_PASSWORD: "yes"
     ports:
-      - 6379
+      - "6379:6379"
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - redis
     logging: *default-logging
 
   cassandra:
     image: bitnami/cassandra:3.11.11
     container_name: cassandra
-    restart: always
     ports:
       - "9042:9042"
     volumes:
       - cassandra:/bitnami
+    restart: always
     healthcheck:
       test: [ "CMD", "cqlsh", "-u", "cassandra", "-p", "cassandra", "-e", "SELECT table_name FROM system_schema.tables WHERE keyspace_name='loki';" ]
       interval: 5s
@@ -40,7 +42,9 @@ services:
       CASSANDRA_CLUSTER_NAME: loki
       CASSANDRA_DATACENTER: dc1
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - cassandra
     logging: *default-logging
 
   consul:
@@ -54,7 +58,9 @@ services:
     ports:
       - 8500:8500
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - consul
     logging: *default-logging
 
   loki-distributor:
@@ -74,7 +80,9 @@ services:
       - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=distributor
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - loki-distributor
     logging: *default-logging
 
   loki-querier:
@@ -94,7 +102,9 @@ services:
       - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=querier
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - loki-querier
     logging: *default-logging
 
   loki-ingester:
@@ -114,7 +124,9 @@ services:
       - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=ingester
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - loki-ingester
     logging: *default-logging
 
   loki-table-manager:
@@ -134,28 +146,9 @@ services:
       - ./local-config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=table-manager
     networks:
-      - lokidemo
-    logging: *default-logging
-
-  nginx-app:
-    image: nginx
-    container_name: nginx-app
-    restart: always
-    ports:
-      - 8084:80
-    networks:
-      - lokidemo
-    depends_on:
-      - loki-distributor
-    logging: *default-logging
-
-  flask-app:
-    image: flask-app
-    container_name: flask-app
-    build: ./flask-app
-    restart: always
-    ports:
-      - 5000:5000
+      loki:
+        aliases:
+          - loki-table-manager
     logging: *default-logging
 
   promtail:
@@ -167,12 +160,12 @@ services:
       - ./docker-config.yaml:/etc/promtail/docker-config.yaml
     command: -config.file=/etc/promtail/docker-config.yaml
     depends_on:
-      flask-app:
-        condition: service_started
       loki-ingester:
         condition: service_started
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - promtail
     logging: *default-logging
 
   grafana:
@@ -188,7 +181,9 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - lokidemo
+      loki:
+        aliases:
+          - grafana
     depends_on:
       loki-ingester:
         condition: service_started
@@ -204,5 +199,5 @@ volumes:
   cassandra: {}
 
 networks:
-  lokidemo:
-    name: lokidemo
+  loki:
+    driver: bridge

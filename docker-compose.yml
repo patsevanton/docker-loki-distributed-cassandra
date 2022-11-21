@@ -71,7 +71,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
+      - ./consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=distributor
     networks:
       - lokidemo
@@ -91,7 +91,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
+      - ./consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=querier
     networks:
       - lokidemo
@@ -111,7 +111,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
+      - ./consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=ingester
     networks:
       - lokidemo
@@ -131,7 +131,7 @@ services:
       cassandra:
         condition: service_healthy
     volumes:
-      - ./configs/loki/consul_config.yaml:/etc/loki/config.yaml
+      - ./consul_config.yaml:/etc/loki/config.yaml
     command: -config.file=/etc/loki/config.yaml -target=table-manager
     networks:
       - lokidemo
@@ -164,7 +164,7 @@ services:
     restart: always
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - ./configs/promtail/docker-config.yaml:/etc/promtail/docker-config.yaml
+      - ./docker-config.yaml:/etc/promtail/docker-config.yaml
     command: -config.file=/etc/promtail/docker-config.yaml
     depends_on:
       flask-app:
@@ -193,7 +193,7 @@ services:
       loki-ingester:
         condition: service_started
     volumes:
-      - ./configs/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - grafana:/var/lib/grafana
     logging: *default-logging
 

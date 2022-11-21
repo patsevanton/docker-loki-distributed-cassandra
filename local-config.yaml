@@ -19,8 +19,6 @@ ingester:
     heartbeat_period: 5s
     join_after: 0s
     min_ready_duration: 10s
-    interface_names:
-      - "eth0"
     final_sleep: 30s
   chunk_idle_period: 5m
   chunk_retain_period: 30s
@@ -32,7 +30,7 @@ schema_config:
       object_store: filesystem
       schema: v11
       index:
-        prefix: index_
+        prefix: cassandra_table
         period: 24h
 
 storage_config:
@@ -43,8 +41,6 @@ storage_config:
     consistency: ONE
     auth: true
     keyspace: loki
-    timeout: 20s
-    connect_timeout: 20s
   filesystem:
     directory: /loki/chunks
 

@@ -30,6 +30,30 @@ services:
     container_name: loki-distributor
     restart: always
     ports:
+      - 3100:3100
+    depends_on:
+      redis:
+        condition: service_started
+      consul:
+        condition: service_started
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./local-config.yaml:/etc/loki/config.yaml
+      - loki:/loki
+    command: -config.file=/etc/loki/config.yaml -target=distributor
+    networks:
+      loki:
+        aliases:
+          - loki-distributor
+    logging: *default-logging
+
+
+  loki-querier:
+    image: grafana/loki:2.4.2
+    container_name: loki-querier
+    restart: always
+    ports:
       - 3101:3100
     depends_on:
       redis:
@@ -40,28 +64,7 @@ services:
         condition: service_healthy
     volumes:
       - ./local-config.yaml:/etc/loki/config.yaml
-    command: -config.file=/etc/loki/config.yaml -target=distributor
-    networks:
-      loki:
-        aliases:
-          - loki-distributor
-    logging: *default-logging
-
-  loki-querier:
-    image: grafana/loki:2.4.2
-    container_name: loki-querier
-    restart: always
-    ports:
-      - 3100
-    depends_on:
-      redis:
-        condition: service_started
-      consul:
-        condition: service_started
-      cassandra:
-        condition: service_healthy
-    volumes:
-      - ./local-config.yaml:/etc/loki/config.yaml
+      - loki:/loki
     command: -config.file=/etc/loki/config.yaml -target=querier
     networks:
       loki:
@@ -84,6 +87,7 @@ services:
         condition: service_healthy
     volumes:
       - ./local-config.yaml:/etc/loki/config.yaml
+      - loki:/loki
     command: -config.file=/etc/loki/config.yaml -target=ingester
     networks:
       loki:
@@ -198,6 +202,7 @@ volumes:
   cassandra:
   redis_data:
   grafana:
+  loki:
   consul-config:
   consul-data:
 
